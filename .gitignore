@@ -1,0 +1,5 @@
+# Syncthing data
+.stfolder/
+
+# Database credentials and secrets
+db.php
