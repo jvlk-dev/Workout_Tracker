@@ -1,4 +1,13 @@
-<?php require_once 'config/db.php'; ?>
+<?php 
+require_once 'config/db.php'; 
+redirectIfNotLoggedIn();
+$u_id = $_SESSION['user_id'];
+
+// Fetch user's templates for the sidebar
+$stmt = $pdo->prepare("SELECT * FROM templates WHERE user_id = ?");
+$stmt->execute([$u_id]);
+$templates = $stmt->fetchAll();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

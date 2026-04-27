@@ -1,25 +1,53 @@
 <?php
 require_once 'config/db.php';
+redirectIfNotLoggedIn(); // Security: Redirect to login if not authenticated
 
-$templates = $pdo->query("SELECT * FROM templates")->fetchAll();
+$u_id = $_SESSION['user_id'];
+
+// 1. Fetch ONLY templates belonging to this user
+$stmt = $pdo->prepare("SELECT * FROM templates WHERE user_id = ?");
+$stmt->execute([$u_id]);
+$templates = $stmt->fetchAll();
+
 $current_template_id = $_GET['template_id'] ?? ($templates[0]['id'] ?? null);
 
+// 2. Security Check: Ensure the requested template belongs to the logged-in user
+$valid_template = false;
+foreach($templates as $t) {
+    if($t['id'] == $current_template_id) {
+        $valid_template = true;
+        $template_name = $t['name'];
+        break;
+    }
+}
+
+if (!$valid_template && !empty($templates)) {
+    // If user tries to access a template ID they don't own, force them to their first template
+    header("Location: tracker.php?template_id=" . $templates[0]['id']);
+    exit();
+}
+
 $exercises = [];
-$template_name = "Selection Required";
-if ($current_template_id) {
+if ($valid_template) {
     $stmt = $pdo->prepare("SELECT * FROM template_exercises WHERE template_id = ?");
     $stmt->execute([$current_template_id]);
     $exercises = $stmt->fetchAll();
-    foreach($templates as $t) { if($t['id'] == $current_template_id) $template_name = $t['name']; }
 }
 
-function getLastSessionSets($pdo, $exercise_name) {
-    $sql = "SELECT weight_val, reps_val, difficulty FROM session_sets 
-            WHERE exercise_name = ? 
-            AND session_id = (SELECT session_id FROM session_sets WHERE exercise_name = ? ORDER BY id DESC LIMIT 1)
-            ORDER BY id ASC";
+// 3. Updated function to ensure we only get the user's personal history
+function getLastSessionSets($pdo, $exercise_name, $u_id) {
+    $sql = "SELECT ss.weight_val, ss.reps_val, ss.difficulty FROM session_sets ss
+            JOIN sessions s ON ss.session_id = s.id
+            WHERE ss.exercise_name = ? AND s.user_id = ?
+            AND ss.session_id = (
+                SELECT session_id FROM session_sets inner_ss
+                JOIN sessions inner_s ON inner_ss.session_id = inner_s.id
+                WHERE inner_ss.exercise_name = ? AND inner_s.user_id = ?
+                ORDER BY inner_ss.id DESC LIMIT 1
+            )
+            ORDER BY ss.id ASC";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$exercise_name, $exercise_name]);
+    $stmt->execute([$exercise_name, $u_id, $exercise_name, $u_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
@@ -92,7 +120,7 @@ function getLastSessionSets($pdo, $exercise_name) {
                         <input type="datetime-local" name="workout_date" id="workout_datetime" class="input-field" value="<?php echo date('Y-m-d\TH:i'); ?>" style="width:220px;">
                     </div>
 
-                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name']); ?>
+                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name'], $u_id); ?>
                         <div class="exercise-block">
                             <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
                             <?php 

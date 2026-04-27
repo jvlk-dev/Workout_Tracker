@@ -1,7 +1,8 @@
 <?php
 require_once '../config/db.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SESSION['user_id'])) {
+    $u_id = $_SESSION['user_id'];
     $name = $_POST['template_name'];
     $ex_names = $_POST['ex_name'];
     $ex_urls = $_POST['ex_url'];
@@ -9,8 +10,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("INSERT INTO templates (name) VALUES (?)");
-        $stmt->execute([$name]);
+        // CHANGE: Included user_id here
+        $stmt = $pdo->prepare("INSERT INTO templates (name, user_id) VALUES (?, ?)");
+        $stmt->execute([$name, $u_id]);
         $templateId = $pdo->lastInsertId();
 
         $stmtEx = $pdo->prepare("INSERT INTO template_exercises (template_id, exercise_name, youtube_url) VALUES (?, ?, ?)");

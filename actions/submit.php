@@ -1,18 +1,20 @@
 <?php
 require_once '../config/db.php';
+// session_start is already in db.php, and redirectIfNotLoggedIn can be used if needed
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $workout_date = $_POST['workout_date']; // Now contains YYYY-MM-DDTHH:MM
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SESSION['user_id'])) {
+    $u_id = $_SESSION['user_id'];
+    $workout_date = $_POST['workout_date'];
     $template_id = $_POST['template_id'] ?? null; 
     $notes = $_POST['notes'] ?? '';
-    $duration = $_POST['session_duration'] ?? 0; // Captured from JS timer
+    $duration = $_POST['session_duration'] ?? 0;
 
     try {
         $pdo->beginTransaction();
 
-        // Updated query to include duration
-        $stmt1 = $pdo->prepare("INSERT INTO sessions (workout_date, template_id, notes, duration) VALUES (?, ?, ?, ?)");
-        $stmt1->execute([$workout_date, $template_id, $notes, $duration]);
+        // CHANGE: Added user_id to the columns and values
+        $stmt1 = $pdo->prepare("INSERT INTO sessions (workout_date, template_id, notes, duration, user_id) VALUES (?, ?, ?, ?, ?)");
+        $stmt1->execute([$workout_date, $template_id, $notes, $duration, $u_id]);
         $sessionId = $pdo->lastInsertId();
 
         if (isset($_POST['weight'])) {

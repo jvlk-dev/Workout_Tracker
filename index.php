@@ -1,20 +1,25 @@
 <?php
 require_once 'config/db.php';
 
-// 1. Fetch templates for the sidebar
-$templates = $pdo->query("SELECT * FROM templates")->fetchAll();
+redirectIfNotLoggedIn(); // ADD THIS
 
-// 2. Fetch Stats for the Dashboard
-$totalWorkouts = $pdo->query("SELECT COUNT(*) FROM sessions")->fetchColumn();
+$u_id = $_SESSION['user_id']; // For convenience
 
-// Calculate total volume: weight * reps
-$totalVolume = $pdo->query("SELECT SUM(weight_val * reps_val) FROM session_sets")->fetchColumn() ?? 0;
+// Update queries to filter by user
+$templates = $pdo->prepare("SELECT * FROM templates WHERE user_id = ?");
+$templates->execute([$u_id]);
+$templates = $templates->fetchAll();
 
-// Get the last 5 sessions across ALL templates for the "Recent Activity" list
-$recentSessions = $pdo->query("SELECT s.*, t.name as template_name 
-                               FROM sessions s 
-                               JOIN templates t ON s.template_id = t.id 
-                               ORDER BY s.workout_date DESC, s.id DESC LIMIT 5")->fetchAll();
+$totalWorkouts = $pdo->prepare("SELECT COUNT(*) FROM sessions WHERE user_id = ?");
+$totalWorkouts->execute([$u_id]);
+$totalWorkouts = $totalWorkouts->fetchColumn();
+
+// Total volume for THIS user
+$totalVolume = $pdo->prepare("SELECT SUM(weight_val * reps_val) FROM session_sets 
+                              JOIN sessions ON session_sets.session_id = sessions.id 
+                              WHERE sessions.user_id = ?");
+$totalVolume->execute([$u_id]);
+$totalVolume = $totalVolume->fetchColumn() ?? 0;
 ?>
 
 <!DOCTYPE html>
