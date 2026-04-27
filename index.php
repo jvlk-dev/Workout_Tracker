@@ -1,43 +1,26 @@
 <?php
 require_once 'config/db.php';
 
-// 1. Fetch all templates for the sidebar
-$stmt = $pdo->query("SELECT * FROM templates");
-$templates = $stmt->fetchAll();
-
-// 2. Determine which template we are looking at
-// If no ID is in the URL, default to the first template found
+$templates = $pdo->query("SELECT * FROM templates")->fetchAll();
 $current_template_id = $_GET['template_id'] ?? ($templates[0]['id'] ?? null);
 
-// 3. Fetch exercises for the selected template
 $exercises = [];
-$template_name = "No Template Selected";
+$template_name = "Select Template";
 if ($current_template_id) {
     $stmt = $pdo->prepare("SELECT * FROM template_exercises WHERE template_id = ?");
     $stmt->execute([$current_template_id]);
     $exercises = $stmt->fetchAll();
-
-    // Get the name of the current template for the title
-    foreach($templates as $t) {
-        if($t['id'] == $current_template_id) $template_name = $t['name'];
-    }
+    foreach($templates as $t) { if($t['id'] == $current_template_id) $template_name = $t['name']; }
 }
 
-// 4. Helper function to get the last weight/reps for placeholders
 function getLastSessionSets($pdo, $exercise_name) {
-    // This subquery finds the ID of the last session that included this exercise
-    $sql = "SELECT weight_val, reps_val, difficulty 
-            FROM session_sets 
+    $sql = "SELECT weight_val, reps_val, difficulty FROM session_sets 
             WHERE exercise_name = ? 
-            AND session_id = (
-                SELECT session_id FROM session_sets 
-                WHERE exercise_name = ? 
-                ORDER BY id DESC LIMIT 1
-            )
-            ORDER BY id ASC"; // ASC ensures we get Set 1, then Set 2, then Set 3
+            AND session_id = (SELECT session_id FROM session_sets WHERE exercise_name = ? ORDER BY id DESC LIMIT 1)
+            ORDER BY id ASC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$exercise_name, $exercise_name]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC); // Notice: fetchAll instead of fetch
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
 
@@ -52,162 +35,114 @@ function getLastSessionSets($pdo, $exercise_name) {
 </head>
 <body>
 
-    <header class="logo-section">
-        <p class="logo-text">Web Workout</p>
-        <button type="button" id="log-out-button">Log out</button>
-    </header>
-
-    <main class="content">
-        <!-- SIDE NAV: DYNAMIC TEMPLATES -->
+    <div class="content">
         <nav class="side-nav">
-            <?php foreach ($templates as $template): ?>
-                <a href="index.php?template_id=<?php echo $template['id']; ?>" 
-                   class="side-nav-button <?php echo ($template['id'] == $current_template_id) ? 'active' : ''; ?>">
-                    <?php echo htmlspecialchars($template['name']); ?>
-                </a>
-            <?php endforeach; ?>
-            <hr>
-            <button type="button" class="side-nav-button">+ New Template</button>
+            <div class="nav-title">Web Workout</div>
+            <hr class="nav-sep">
+            <a href="overview.php" class="side-nav-button overview-btn"><i class="fa-solid fa-chart-line"></i> Overview</a>
+            <hr class="nav-sep">
+            
+            <div style="flex:1; overflow-y: auto;">
+                <?php foreach ($templates as $template): ?>
+                    <a href="index.php?template_id=<?php echo $template['id']; ?>" 
+                       class="side-nav-button <?php echo ($template['id'] == $current_template_id) ? 'active' : ''; ?>">
+                        <i class="fa-solid fa-dumbbell"></i> <?php echo htmlspecialchars($template['name']); ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
+            <hr class="nav-sep">
+            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);"><i class="fa-solid fa-plus-circle"></i> New Template</a>
+            <hr class="nav-sep">
+            <a href="logout.php" class="side-nav-button" style="color:#ff7b72;"><i class="fa-solid fa-power-off"></i> Logout</a>
         </nav>
 
         <div class="logger-history">
-        
-            <!-- SECTION 1: CURRENT WORKOUT FORM -->
-            <div class="logger current-workout">
-                <form id="workout-form" method="POST" action="submit.php">
+            <div class="workout-card">
+                <form id="workout-form" method="POST" action="actions/submit.php">
                     <input type="hidden" name="template_id" value="<?php echo $current_template_id; ?>">
-                    
-                    <h1 class="workout_type">Log Workout: <?php echo htmlspecialchars($template_name); ?></h2>
-                    
-                    <div class="form-header">
-                        <label for="focus">Focus:</label>
-                        <input type="text" name="focus" class="focus" placeholder="e.g. Heavy Push" required>
-                        
-                        <label for="date">Date:</label>
-                        <input type="date" name="workout_date" class="input_logger_date" value="<?php echo date('Y-m-d'); ?>" required>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5rem;">
+                        <h1 style="margin:0;"><?php echo htmlspecialchars($template_name); ?></h1>
+                        <input type="date" name="workout_date" class="input-field" value="<?php echo date('Y-m-d'); ?>" style="width:180px;">
                     </div>
 
-                    <div class="exercises">
-                        <?php 
-                        $global_set_index = 0; 
-                        foreach ($exercises as $ex): 
-                            // 1. Fetch the ARRAY of all sets from the last time you did this exercise
-                            $lastSessionSets = getLastSessionSets($pdo, $ex['exercise_name']); 
-                        ?>
-                            <div class="exercise">
-                                <label><?php echo htmlspecialchars($ex['exercise_name']); ?></label>
-                                
-                                    <?php for ($i = 1; $i <= 3; $i++): 
-                                        // 2. Get the specific data for THIS set number (if it exists)
-                                        // Set 1 is index 0, Set 2 is index 1, etc.
-                                        $setData = $lastSessionSets[$i - 1] ?? null;
-                                        $placeholder_weight = "Kg";
-                                        $initial_class = "border-default"; // Default
-
-                                        if ($setData) {
-                                            $placeholder_weight = "Last: " . $setData['weight_val'] . "kg";
-                                            if ($setData['difficulty'] == 'Easy') {
-                                                $initial_class = "border-easy";
-                                            } elseif ($setData['difficulty'] == 'Hard') {
-                                                $initial_class = "border-hard";
-                                            }
-                                        }
-                                    ?>
-                                    <div class="set">
-                                        <p>Set <?php echo $i; ?></p>
-                                        <div class="set_row">
-                                            <!-- Added the $initial_class here -->
-                                            <input 
-                                                type="number" 
-                                                name="weight[]" 
-                                                class="input_logger_text <?php echo $initial_class; ?>" 
-                                                placeholder="<?php echo $placeholder_weight; ?>">
-                                            
-                                            <input 
-                                                type="number" 
-                                                name="reps[]" 
-                                                class="input_logger_text <?php echo $initial_class; ?>" 
-                                                placeholder="<?php echo $setData ? 'Last: '.$setData['reps_val'] . "x" : 'Reps'; ?>">
-
-                                            <div class="difficulty-picker">
-                                                <label class="diff-btn">
-                                                    <input type="radio" name="difficulty[<?php echo $global_set_index; ?>]" value="Easy" class="diff-radio">
-                                                    <span class="btn-label easy">Easy</span>
-                                                </label>
-                                                <label class="diff-btn">
-                                                    <input type="radio" name="difficulty[<?php echo $global_set_index; ?>]" value="Moderate" class="diff-radio">
-                                                    <span class="btn-label moderate">Moderate</span>
-                                                </label>
-                                                <label class="diff-btn">
-                                                    <input type="radio" name="difficulty[<?php echo $global_set_index; ?>]" value="Hard" class="diff-radio">
-                                                    <span class="btn-label hard">Hard</span>
-                                                </label>
-                                            </div>
-                                            <input type="hidden" name="exercise_name[]" value="<?php echo htmlspecialchars($ex['exercise_name']); ?>">
-                                        </div>
+                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name']); ?>
+                        <div class="exercise-block">
+                            <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
+                            <?php for ($i = 1; $i <= 3; $i++): 
+                                $sData = $last[$i-1] ?? null;
+                                $lastDiff = $sData ? 'last-'.strtolower($sData['difficulty']) : '';
+                            ?>
+                                <div class="set-row">
+                                    <div class="set-label">Set <?php echo $i; ?></div>
+                                    <div class="input-group">
+                                        <span class="input-label">Weight</span>
+                                        <input type="number" name="weight[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['weight_val'].'kg' : '--'; ?>">
                                     </div>
-                                    <?php $global_set_index++; ?>
-                                <?php endfor; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <button type="submit" class="save-button">Save Workout</button>
+                                    <div class="input-group">
+                                        <span class="input-label">Reps</span>
+                                        <input type="number" name="reps[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['reps_val'] : '--'; ?>">
+                                    </div>
+                                    <div class="difficulty-picker">
+                                        <?php foreach(['Easy', 'Moderate', 'Hard'] as $lvl): ?>
+                                            <label><input type="radio" name="difficulty[<?php echo $global_idx; ?>]" value="<?php echo $lvl; ?>" style="display:none;" class="diff-radio"><span class="diff-btn <?php echo strtolower($lvl); ?>"><?php echo $lvl; ?></span></label>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <input type="hidden" name="exercise_name[]" value="<?php echo htmlspecialchars($ex['exercise_name']); ?>">
+                                </div>
+                            <?php $global_idx++; endfor; ?>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <textarea name="notes" class="notes-area" rows="3" placeholder="Session notes (optional)..."></textarea>
+                    <button type="submit" class="save-button">SAVE WORKOUT</button>
                 </form>
             </div>
 
-            <!-- SECTION 2: HISTORY HEADER -->
-            <h1 class="history-title">Workout History</h1>
-
-            <!-- SECTION 3: HISTORY ENTRIES -->
+            <h2 style="color:var(--text-dim); margin-bottom:1.5rem;">Template History</h2>
             <?php
-            $stmt = $pdo->prepare("SELECT * FROM sessions WHERE template_id = ? ORDER BY workout_date DESC");
+            $stmt = $pdo->prepare("SELECT * FROM sessions WHERE template_id = ? ORDER BY workout_date DESC, id DESC LIMIT 10");
             $stmt->execute([$current_template_id]);
-            $historySessions = $stmt->fetchAll();
-
-            foreach ($historySessions as $session): 
+            while ($sess = $stmt->fetch()):
                 $setStmt = $pdo->prepare("SELECT * FROM session_sets WHERE session_id = ?");
-                $setStmt->execute([$session['id']]);
-                $loggedSets = $setStmt->fetchAll();
-                
-                $groupedSets = [];
-                foreach ($loggedSets as $set) {
-                    $groupedSets[$set['exercise_name']][] = $set;
-                }
+                $setStmt->execute([$sess['id']]);
+                $logged = $setStmt->fetchAll();
+                if(empty($logged)) continue;
+                $grouped = []; foreach ($logged as $s) { $grouped[$s['exercise_name']][] = $s; }
             ?>
-                <div class="logger history-entry">
-                    <h2 class="history_entry_date"><?php echo $session['workout_date']; ?></h3>
-
-                    <div class="exercises">
-                        <?php foreach ($groupedSets as $exName => $sets): ?>
-                            <div class="exercise">
-                                <label class="history_entry_exercise_name"><?php echo htmlspecialchars($exName); ?></label>
-                                    <?php foreach ($sets as $index => $set): ?>
-                                        <div class="set">
-                                            <p>Set <?php echo $index + 1; ?></p>
-                                            <div class="set_row">
-                                                <input type="text" class="input_logger_text" value="<?php echo $set['weight_val']; ?>kg" readonly>
-                                                <input type="text" class="input_logger_text" value="<?php echo $set['reps_val']; ?>x" readonly>
-                                                
-                                                <!-- Visual Indicator for Difficulty -->
-                                                <?php 
-                                                    $color = "#888"; // Default
-                                                    if($set['difficulty'] == 'Easy') $color = "#28a745"; // Green
-                                                    if($set['difficulty'] == 'Moderate') $color = "#ffc107"; // Yellow
-                                                    if($set['difficulty'] == 'Hard') $color = "#dc3545"; // Red
-                                                ?>
-                                                <span class="history_set_difficulty" style="color: <?php echo $color; ?>; font-weight: bold;">
-                                                    <?php echo strtoupper($set['difficulty']); ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                <div class="workout-card history-card">
+                    <span class="history-date"><i class="fa-regular fa-calendar-check" style="margin-right:10px;"></i><?php echo date("F j, Y", strtotime($sess['workout_date'])); ?></span>
+                    <?php foreach ($grouped as $name => $sets): ?>
+                        <div class="exercise-block" style="border-color:#222; margin-bottom:1rem;">
+                            <div class="exercise-title" style="font-size:1.1rem;"><?php echo htmlspecialchars($name); ?></div>
+                            <?php foreach ($sets as $idx => $s): ?>
+                                <div class="set-row">
+                                    <div class="set-label">Set <?php echo $idx+1; ?></div>
+                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['weight_val']; ?>kg" readonly></div>
+                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['reps_val']; ?>x" readonly></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <?php if(!empty($sess['notes'])): ?><div style="font-size:0.9rem; color:var(--text-dim); font-style:italic; padding:10px; background:#000; border-radius:5px;">Note: <?php echo htmlspecialchars($sess['notes']); ?></div><?php endif; ?>
                 </div>
-            <?php endforeach; ?>
-
+            <?php endwhile; ?>
         </div>
-    </main>
+    </div>
+
+    <div id="timer-widget">
+        <i class="fa-solid fa-stopwatch timer-icon" style="font-size:2rem; color:var(--accent);"></i>
+        <div class="timer-content">
+            <div class="timer-display" id="timer-text">01:30</div>
+            <div class="timer-controls">
+                <button id="t-start" class="t-ctrl-btn"><i class="fa-solid fa-play"></i></button>
+                <button id="t-pause" class="t-ctrl-btn"><i class="fa-solid fa-pause"></i></button>
+                <button id="t-reset" class="t-ctrl-btn"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <div class="t-input-container">
+                <input type="number" id="t-input" value="90">
+            </div>
+        </div>
+    </div>
 </body>
 </html>

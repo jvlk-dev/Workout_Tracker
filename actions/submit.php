@@ -2,40 +2,29 @@
 require_once '../config/db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
-    // 3. Get the "Header" info
-    $focus = $_POST['focus'];
     $workout_date = $_POST['workout_date'];
-    
-    // --- NEW: Get the template ID from the hidden form field ---
     $template_id = $_POST['template_id'] ?? null; 
+    $notes = $_POST['notes'] ?? '';
 
     try {
         $pdo->beginTransaction();
 
-        // --- UPDATED: Added template_id to the INSERT and the VALUES (?) ---
-        $sql1 = "INSERT INTO sessions (workout_date, focus, template_id) VALUES (?, ?, ?)";
-        $stmt1 = $pdo->prepare($sql1);
-        
-        // --- UPDATED: Pass the $template_id in the execution array ---
-        $stmt1->execute([$workout_date, $focus, $template_id]);
-        
+        $stmt1 = $pdo->prepare("INSERT INTO sessions (workout_date, template_id, notes) VALUES (?, ?, ?)");
+        $stmt1->execute([$workout_date, $template_id, $notes]);
         $sessionId = $pdo->lastInsertId();
 
         if (isset($_POST['weight'])) {
             $weights = $_POST['weight'];
             $reps = $_POST['reps'];
             $exercise_names = $_POST['exercise_name'];
-            $difficulties = $_POST['difficulty']; // This will be an array like [0 => 'Easy', 1 => 'Moderate'...]
+            $difficulties = $_POST['difficulty'];
 
-            $sql2 = "INSERT INTO session_sets (session_id, exercise_name, weight_val, reps_val, difficulty) VALUES (?, ?, ?, ?, ?)";
-            $stmt2 = $pdo->prepare($sql2);
+            $stmt2 = $pdo->prepare("INSERT INTO session_sets (session_id, exercise_name, weight_val, reps_val, difficulty) VALUES (?, ?, ?, ?, ?)");
 
             foreach ($weights as $index => $weight) {
-                if (!empty($weight) && !empty($reps[$index])) {
-                    // We use the same $index to find the difficulty
+                // FIXED: strlen check allows "0" but ignores empty strings
+                if (strlen($weight) > 0 && strlen($reps[$index]) > 0) {
                     $difficulty_value = $difficulties[$index] ?? 'Moderate';
-
                     $stmt2->execute([
                         $sessionId, 
                         $exercise_names[$index], 
@@ -48,13 +37,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $pdo->commit();
-
-        // --- UPDATED: Redirect back to the specific template you were on ---
-        header("Location: index.php?template_id=" . $template_id . "&status=success");
+        header("Location: ../index.php?template_id=" . $template_id);
         exit();
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        die("Error saving workout: " . $e->getMessage());
+        die("Error saving: " . $e->getMessage());
     }
 }
