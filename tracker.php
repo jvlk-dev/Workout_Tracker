@@ -95,7 +95,10 @@ function getLastSessionSets($pdo, $exercise_name) {
                     <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name']); ?>
                         <div class="exercise-block">
                             <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
-                            <?php for ($i = 1; $i <= 3; $i++): 
+                            <?php 
+                            // CHANGE: Using dynamic set count from database instead of hardcoded 3
+                            $setCount = $ex['default_sets'] ?? 3; 
+                            for ($i = 1; $i <= $setCount; $i++): 
                                 $sData = $last[$i-1] ?? null;
                                 $lastDiff = $sData ? 'last-'.strtolower($sData['difficulty']) : '';
                             ?>
@@ -176,13 +179,19 @@ function getLastSessionSets($pdo, $exercise_name) {
         <i class="fa-solid fa-stopwatch timer-icon" style="font-size:2rem; color:var(--accent);"></i>
         <div class="timer-content">
             <div class="timer-display" id="timer-text">01:30</div>
+            
             <div class="timer-controls">
                 <button id="t-start" class="t-ctrl-btn"><i class="fa-solid fa-play"></i></button>
                 <button id="t-pause" class="t-ctrl-btn"><i class="fa-solid fa-pause"></i></button>
                 <button id="t-reset" class="t-ctrl-btn"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
+
             <div class="t-input-container">
-                <input type="number" id="t-input" value="45">
+                <div style="display:flex; gap:5px; margin-bottom:5px;">
+                    <button class="t-adjust-btn" onclick="event.stopPropagation(); adjustTimer(-15)">-15s</button>
+                    <button class="t-adjust-btn" onclick="event.stopPropagation(); adjustTimer(15)">+15s</button>
+                </div>
+                <input type="number" id="t-input" value="90">
             </div>
         </div>
     </div>

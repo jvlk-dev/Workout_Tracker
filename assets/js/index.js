@@ -1,19 +1,19 @@
 document.addEventListener('DOMContentLoaded', function() {
     
-    // ==========================================
-    // 1. REST TIMER WIDGET (Floating)
+// ==========================================
+    // 1. REFINED MANUAL REST TIMER
     // ==========================================
     const widget = document.getElementById('timer-widget');
     const timerText = document.getElementById('timer-text');
     const tInput = document.getElementById('t-input');
-    let restTimerInt;
-    let restTimeLeft = 90;
+    let restTimerInt = null;
+    let restTimeLeft = parseInt(tInput.value);
 
+    // Expand/Collapse logic
     if (widget) {
         widget.addEventListener('click', (e) => {
             if (!widget.classList.contains('expanded')) widget.classList.add('expanded');
         });
-
         document.addEventListener('click', (e) => {
             if (!widget.contains(e.target)) widget.classList.remove('expanded');
         });
@@ -23,18 +23,27 @@ document.addEventListener('DOMContentLoaded', function() {
         let m = Math.floor(restTimeLeft / 60);
         let s = restTimeLeft % 60;
         timerText.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        // Visual cue when finished
+        if (restTimeLeft === 0) {
+            timerText.style.color = "#ff7b72";
+            timerText.classList.add('blink');
+        } else {
+            timerText.style.color = "var(--text-main)";
+            timerText.classList.remove('blink');
+        }
     }
 
     document.getElementById('t-start').addEventListener('click', (e) => {
         e.stopPropagation();
-        clearInterval(restTimerInt);
+        if (restTimerInt) return; // Already running
+        
         restTimerInt = setInterval(() => {
             if(restTimeLeft > 0) { 
                 restTimeLeft--; 
                 updateRestDisplay(); 
             } else { 
-                clearInterval(restTimerInt); 
-                timerText.style.color = "#ff7b72"; 
+                clearInterval(restTimerInt);
+                restTimerInt = null;
             }
         }, 1000);
     });
@@ -42,20 +51,27 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('t-pause').addEventListener('click', (e) => { 
         e.stopPropagation(); 
         clearInterval(restTimerInt); 
+        restTimerInt = null;
     });
 
     document.getElementById('t-reset').addEventListener('click', (e) => {
         e.stopPropagation();
         clearInterval(restTimerInt);
+        restTimerInt = null;
         restTimeLeft = parseInt(tInput.value);
-        timerText.style.color = "var(--text-main)";
         updateRestDisplay();
     });
+
+    // Helper to add/subtract time quickly
+    window.adjustTimer = function(seconds) {
+        restTimeLeft = Math.max(0, restTimeLeft + seconds);
+        updateRestDisplay();
+    }
 
     if (tInput) {
         tInput.addEventListener('click', (e) => e.stopPropagation());
         tInput.addEventListener('change', () => { 
-            restTimeLeft = tInput.value; 
+            restTimeLeft = parseInt(tInput.value); 
             updateRestDisplay(); 
         });
     }

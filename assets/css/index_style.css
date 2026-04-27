@@ -279,3 +279,24 @@ body {
     font-weight: bold;
     border: 1px solid rgba(121, 192, 255, 0.2);
 }
+
+/* Blink animation for finished timer */
+.blink {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
+}
+
+/* Style for adjust buttons if you add them to HTML */
+.t-adjust-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+}
+.t-adjust-btn:hover { color: var(--accent); border-color: var(--accent); }
