@@ -2,15 +2,17 @@
 require_once '../config/db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $workout_date = $_POST['workout_date'];
+    $workout_date = $_POST['workout_date']; // Now contains YYYY-MM-DDTHH:MM
     $template_id = $_POST['template_id'] ?? null; 
     $notes = $_POST['notes'] ?? '';
+    $duration = $_POST['session_duration'] ?? 0; // Captured from JS timer
 
     try {
         $pdo->beginTransaction();
 
-        $stmt1 = $pdo->prepare("INSERT INTO sessions (workout_date, template_id, notes) VALUES (?, ?, ?)");
-        $stmt1->execute([$workout_date, $template_id, $notes]);
+        // Updated query to include duration
+        $stmt1 = $pdo->prepare("INSERT INTO sessions (workout_date, template_id, notes, duration) VALUES (?, ?, ?, ?)");
+        $stmt1->execute([$workout_date, $template_id, $notes, $duration]);
         $sessionId = $pdo->lastInsertId();
 
         if (isset($_POST['weight'])) {
@@ -22,7 +24,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt2 = $pdo->prepare("INSERT INTO session_sets (session_id, exercise_name, weight_val, reps_val, difficulty) VALUES (?, ?, ?, ?, ?)");
 
             foreach ($weights as $index => $weight) {
-                // FIXED: strlen check allows "0" but ignores empty strings
                 if (strlen($weight) > 0 && strlen($reps[$index]) > 0) {
                     $difficulty_value = $difficulties[$index] ?? 'Moderate';
                     $stmt2->execute([
@@ -37,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $pdo->commit();
-        header("Location: ../tracker.php?template_id=" . $templateId);
+        header("Location: ../tracker.php?template_id=" . $template_id);
         exit();
 
     } catch (Exception $e) {

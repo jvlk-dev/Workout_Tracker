@@ -110,7 +110,9 @@ body {
     transition: 0.2s;
 }
 .diff-btn:hover { background: #555; color: white; }
-.diff-btn:active { transform: scale(0.9); }
+.diff-btn:active {
+    transform: scale(0.92);
+}
 .diff-radio:checked + .diff-btn.easy { background: var(--easy); color: white; }
 .diff-radio:checked + .diff-btn.moderate { background: var(--mod); color: white; }
 .diff-radio:checked + .diff-btn.hard { background: var(--hard); color: white; }
@@ -191,3 +193,89 @@ body {
 
 /* --- HISTORY --- */
 .history-date { font-size: 1rem; color: #8b949e; margin-bottom: 1.5rem; display: block; }
+
+
+/* Start Workout Button */
+.start-session-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.start-button {
+    width: 100%;
+    padding: 1.5rem;
+    background: var(--accent);
+    color: var(--bg-body);
+    border: none;
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.start-button:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+.start-button:active {
+    transform: scale(0.98);
+}
+
+/* --- UPDATED TIMER & START UI --- */
+
+/* Full width timer block above the form */
+.session-timer-bar {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-bottom: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: none; /* Shown via JS */
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    box-sizing: border-box;
+    animation: pulse-border 2s infinite;
+}
+
+.timer-digits {
+    font-size: 2.5rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+}
+
+.timer-label {
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+}
+
+@keyframes pulse-border {
+    0% { border-color: var(--accent); }
+    50% { border-color: #2ea043; }
+    100% { border-color: var(--accent); }
+}
+
+/* History Duration Badge */
+.history-duration {
+    background: rgba(121, 192, 255, 0.1);
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    border: 1px solid rgba(121, 192, 255, 0.2);
+}

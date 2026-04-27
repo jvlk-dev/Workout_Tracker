@@ -66,13 +66,30 @@ function getLastSessionSets($pdo, $exercise_name) {
         </nav>
 
         <div class="logger-history">
-            <div class="workout-card">
+    
+            <!-- 1. START WORKOUT BUTTON -->
+            <div class="start-session-container" id="start-btn-area">
+                <button type="button" class="start-button" id="btn-start-workout">
+                    <i class="fa-solid fa-play"></i> Start New Workout
+                </button>
+            </div>
+
+            <!-- 2. FULL WIDTH LIVE TIMER (Above Form) -->
+            <div id="live-timer-container" class="session-timer-bar">
+                <span class="timer-label">Session Time</span>
+                <div class="timer-digits" id="live-timer-text">00:00</div>
+                <i class="fa-solid fa-stopwatch fa-spin-pulse" style="color:var(--accent); font-size: 1.5rem;"></i>
+            </div>
+
+            <!-- 3. THE WORKOUT FORM -->
+            <div class="workout-card" id="workout-form-container" style="display:none;">
                 <form id="workout-form" method="POST" action="actions/submit.php">
                     <input type="hidden" name="template_id" value="<?php echo $current_template_id; ?>">
+                    <input type="hidden" name="session_duration" id="session_duration_input" value="0">
                     
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5rem;">
                         <h1 style="margin:0;"><?php echo htmlspecialchars($template_name); ?></h1>
-                        <input type="date" name="workout_date" class="input-field" value="<?php echo date('Y-m-d'); ?>" style="width:180px;">
+                        <input type="datetime-local" name="workout_date" id="workout_datetime" class="input-field" value="<?php echo date('Y-m-d\TH:i'); ?>" style="width:220px;">
                     </div>
 
                     <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name']); ?>
@@ -86,11 +103,11 @@ function getLastSessionSets($pdo, $exercise_name) {
                                     <div class="set-label">Set <?php echo $i; ?></div>
                                     <div class="input-group">
                                         <span class="input-label">Weight</span>
-                                        <input type="number" name="weight[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['weight_val'].'kg' : '--'; ?>">
+                                        <input type="number" name="weight[]" step="any" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['weight_val'].'kg' : '--'; ?>">
                                     </div>
                                     <div class="input-group">
                                         <span class="input-label">Reps</span>
-                                        <input type="number" name="reps[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['reps_val'] : '--'; ?>">
+                                        <input type="number" name="reps[]" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['reps_val'] : '--'; ?>">
                                     </div>
                                     <div class="difficulty-picker">
                                         <?php foreach(['Easy', 'Moderate', 'Hard'] as $lvl): ?>
@@ -108,6 +125,7 @@ function getLastSessionSets($pdo, $exercise_name) {
                 </form>
             </div>
 
+            <!-- 4. HISTORY SECTION -->
             <h2 style="color:var(--text-dim); margin-bottom:1.5rem;">Template History</h2>
             <?php
             $stmt = $pdo->prepare("SELECT * FROM sessions WHERE template_id = ? ORDER BY workout_date DESC, id DESC LIMIT 10");
@@ -118,9 +136,23 @@ function getLastSessionSets($pdo, $exercise_name) {
                 $logged = $setStmt->fetchAll();
                 if(empty($logged)) continue;
                 $grouped = []; foreach ($logged as $s) { $grouped[$s['exercise_name']][] = $s; }
+
+                // Formatting Duration for History
+                $mins = floor($sess['duration'] / 60);
+                $secs = $sess['duration'] % 60;
+                $time_formatted = sprintf("%dm %02ds", $mins, $secs);
             ?>
                 <div class="workout-card history-card">
-                    <span class="history-date"><i class="fa-regular fa-calendar-check" style="margin-right:10px;"></i><?php echo date("F j, Y", strtotime($sess['workout_date'])); ?></span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; border-bottom: 1px solid #222; padding-bottom: 1rem;">
+                        <span class="history-date" style="margin:0;">
+                            <i class="fa-regular fa-calendar-check" style="margin-right:10px; color: var(--accent);"></i>
+                            <?php echo date("F j, Y — H:i", strtotime($sess['workout_date'])); ?>
+                        </span>
+                        <span class="history-duration">
+                            <i class="fa-solid fa-stopwatch" style="margin-right:5px;"></i> <?php echo $time_formatted; ?>
+                        </span>
+                    </div>
+                    
                     <?php foreach ($grouped as $name => $sets): ?>
                         <div class="exercise-block" style="border-color:#222; margin-bottom:1rem;">
                             <div class="exercise-title" style="font-size:1.1rem;"><?php echo htmlspecialchars($name); ?></div>
@@ -150,8 +182,7 @@ function getLastSessionSets($pdo, $exercise_name) {
                 <button id="t-reset" class="t-ctrl-btn"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
             <div class="t-input-container">
-                <span style="font-size:9px; color:var(--text-dim);">SECS</span>
-                <input type="number" id="t-input" value="90">
+                <input type="number" id="t-input" value="45">
             </div>
         </div>
     </div>

@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $pdo->commit();
-        header("Location: index.php?template_id=" . $templateId);
+        header("Location: ../tracker.php?template_id=" . $templateId);
     } catch (Exception $e) {
         $pdo->rollBack();
         die("Error: " . $e->getMessage());
