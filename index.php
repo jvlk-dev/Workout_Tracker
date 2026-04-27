@@ -1,148 +1,94 @@
 <?php
 require_once 'config/db.php';
 
+// 1. Fetch templates for the sidebar
 $templates = $pdo->query("SELECT * FROM templates")->fetchAll();
-$current_template_id = $_GET['template_id'] ?? ($templates[0]['id'] ?? null);
 
-$exercises = [];
-$template_name = "Select Template";
-if ($current_template_id) {
-    $stmt = $pdo->prepare("SELECT * FROM template_exercises WHERE template_id = ?");
-    $stmt->execute([$current_template_id]);
-    $exercises = $stmt->fetchAll();
-    foreach($templates as $t) { if($t['id'] == $current_template_id) $template_name = $t['name']; }
-}
+// 2. Fetch Stats for the Dashboard
+$totalWorkouts = $pdo->query("SELECT COUNT(*) FROM sessions")->fetchColumn();
 
-function getLastSessionSets($pdo, $exercise_name) {
-    $sql = "SELECT weight_val, reps_val, difficulty FROM session_sets 
-            WHERE exercise_name = ? 
-            AND session_id = (SELECT session_id FROM session_sets WHERE exercise_name = ? ORDER BY id DESC LIMIT 1)
-            ORDER BY id ASC";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$exercise_name, $exercise_name]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+// Calculate total volume: weight * reps
+$totalVolume = $pdo->query("SELECT SUM(weight_val * reps_val) FROM session_sets")->fetchColumn() ?? 0;
+
+// Get the last 5 sessions across ALL templates for the "Recent Activity" list
+$recentSessions = $pdo->query("SELECT s.*, t.name as template_name 
+                               FROM sessions s 
+                               JOIN templates t ON s.template_id = t.id 
+                               ORDER BY s.workout_date DESC, s.id DESC LIMIT 5")->fetchAll();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Web Workout | <?php echo htmlspecialchars($template_name); ?></title>
+    <title>Web Workout | Overview</title>
     <link rel="stylesheet" href="assets/css/index_style.css">
     <script src="https://kit.fontawesome.com/9526c175c2.js" crossorigin="anonymous"></script>
-    <script src="assets/js/index.js" defer></script>
 </head>
 <body>
 
     <div class="content">
+        <!-- SIDENAV: Standardized across all pages -->
         <nav class="side-nav">
             <div class="nav-title">Web Workout</div>
             <hr class="nav-sep">
-            <a href="overview.php" class="side-nav-button overview-btn"><i class="fa-solid fa-chart-line"></i> Overview</a>
+            
+            <a href="index.php" class="side-nav-button overview-btn active">
+                <i class="fa-solid fa-chart-line"></i> Overview
+            </a>
+            
             <hr class="nav-sep">
             
             <div style="flex:1; overflow-y: auto;">
                 <?php foreach ($templates as $template): ?>
-                    <a href="index.php?template_id=<?php echo $template['id']; ?>" 
-                       class="side-nav-button <?php echo ($template['id'] == $current_template_id) ? 'active' : ''; ?>">
+                    <a href="tracker.php?template_id=<?php echo $template['id']; ?>" class="side-nav-button">
                         <i class="fa-solid fa-dumbbell"></i> <?php echo htmlspecialchars($template['name']); ?>
                     </a>
                 <?php endforeach; ?>
             </div>
 
             <hr class="nav-sep">
-            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);"><i class="fa-solid fa-plus-circle"></i> New Template</a>
+            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
+                <i class="fa-solid fa-plus-circle"></i> New Template
+            </a>
             <hr class="nav-sep">
-            <a href="logout.php" class="side-nav-button" style="color:#ff7b72;"><i class="fa-solid fa-power-off"></i> Logout</a>
+            <a href="logout.php" class="side-nav-button" style="color:#ff7b72;">
+                <i class="fa-solid fa-power-off"></i> Logout
+            </a>
         </nav>
 
         <div class="logger-history">
-            <div class="workout-card">
-                <form id="workout-form" method="POST" action="actions/submit.php">
-                    <input type="hidden" name="template_id" value="<?php echo $current_template_id; ?>">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2.5rem;">
-                        <h1 style="margin:0;"><?php echo htmlspecialchars($template_name); ?></h1>
-                        <input type="date" name="workout_date" class="input-field" value="<?php echo date('Y-m-d'); ?>" style="width:180px;">
-                    </div>
+            <h1 style="margin-bottom: 2rem;">Workout Dashboard</h1>
 
-                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name']); ?>
-                        <div class="exercise-block">
-                            <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
-                            <?php for ($i = 1; $i <= 3; $i++): 
-                                $sData = $last[$i-1] ?? null;
-                                $lastDiff = $sData ? 'last-'.strtolower($sData['difficulty']) : '';
-                            ?>
-                                <div class="set-row">
-                                    <div class="set-label">Set <?php echo $i; ?></div>
-                                    <div class="input-group">
-                                        <span class="input-label">Weight</span>
-                                        <input type="number" name="weight[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['weight_val'].'kg' : '--'; ?>">
-                                    </div>
-                                    <div class="input-group">
-                                        <span class="input-label">Reps</span>
-                                        <input type="number" name="reps[]" min="0" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['reps_val'] : '--'; ?>">
-                                    </div>
-                                    <div class="difficulty-picker">
-                                        <?php foreach(['Easy', 'Moderate', 'Hard'] as $lvl): ?>
-                                            <label><input type="radio" name="difficulty[<?php echo $global_idx; ?>]" value="<?php echo $lvl; ?>" style="display:none;" class="diff-radio"><span class="diff-btn <?php echo strtolower($lvl); ?>"><?php echo $lvl; ?></span></label>
-                                        <?php endforeach; ?>
-                                    </div>
-                                    <input type="hidden" name="exercise_name[]" value="<?php echo htmlspecialchars($ex['exercise_name']); ?>">
-                                </div>
-                            <?php $global_idx++; endfor; ?>
-                        </div>
-                    <?php endforeach; ?>
-
-                    <textarea name="notes" class="notes-area" rows="3" placeholder="Session notes (optional)..."></textarea>
-                    <button type="submit" class="save-button">SAVE WORKOUT</button>
-                </form>
-            </div>
-
-            <h2 style="color:var(--text-dim); margin-bottom:1.5rem;">Template History</h2>
-            <?php
-            $stmt = $pdo->prepare("SELECT * FROM sessions WHERE template_id = ? ORDER BY workout_date DESC, id DESC LIMIT 10");
-            $stmt->execute([$current_template_id]);
-            while ($sess = $stmt->fetch()):
-                $setStmt = $pdo->prepare("SELECT * FROM session_sets WHERE session_id = ?");
-                $setStmt->execute([$sess['id']]);
-                $logged = $setStmt->fetchAll();
-                if(empty($logged)) continue;
-                $grouped = []; foreach ($logged as $s) { $grouped[$s['exercise_name']][] = $s; }
-            ?>
-                <div class="workout-card history-card">
-                    <span class="history-date"><i class="fa-regular fa-calendar-check" style="margin-right:10px;"></i><?php echo date("F j, Y", strtotime($sess['workout_date'])); ?></span>
-                    <?php foreach ($grouped as $name => $sets): ?>
-                        <div class="exercise-block" style="border-color:#222; margin-bottom:1rem;">
-                            <div class="exercise-title" style="font-size:1.1rem;"><?php echo htmlspecialchars($name); ?></div>
-                            <?php foreach ($sets as $idx => $s): ?>
-                                <div class="set-row">
-                                    <div class="set-label">Set <?php echo $idx+1; ?></div>
-                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['weight_val']; ?>kg" readonly></div>
-                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['reps_val']; ?>x" readonly></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endforeach; ?>
-                    <?php if(!empty($sess['notes'])): ?><div style="font-size:0.9rem; color:var(--text-dim); font-style:italic; padding:10px; background:#000; border-radius:5px;">Note: <?php echo htmlspecialchars($sess['notes']); ?></div><?php endif; ?>
+            <!-- STATS GRID -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+                <div class="workout-card" style="margin-bottom: 0; text-align: center;">
+                    <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Sessions</p>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: var(--accent);"><?php echo $totalWorkouts; ?></h2>
                 </div>
-            <?php endwhile; ?>
+                <div class="workout-card" style="margin-bottom: 0; text-align: center;">
+                    <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Volume</p>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: #2ea043;"><?php echo number_format($totalVolume); ?> <span style="font-size: 1rem;">kg</span></h2>
+                </div>
+            </div>
+
+            <!-- RECENT ACTIVITY -->
+            <h2 style="color: var(--text-dim); margin-bottom: 1.5rem;">Recent Activity</h2>
+            <?php if(empty($recentSessions)): ?>
+                <div class="workout-card history-card">No workouts recorded yet. Pick a template to start!</div>
+            <?php else: ?>
+                <?php foreach($recentSessions as $sess): ?>
+                    <div class="workout-card history-card" style="padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: var(--accent);"><?php echo htmlspecialchars($sess['template_name']); ?></strong>
+                            <div style="font-size: 0.85rem; color: var(--text-dim);"><?php echo date("F j, Y", strtotime($sess['workout_date'])); ?></div>
+                        </div>
+                        <a href="tracker.php?template_id=<?php echo $sess['template_id']; ?>" class="diff-btn" style="text-decoration: none;">View Template</a>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
-    <div id="timer-widget">
-        <i class="fa-solid fa-stopwatch timer-icon" style="font-size:2rem; color:var(--accent);"></i>
-        <div class="timer-content">
-            <div class="timer-display" id="timer-text">01:30</div>
-            <div class="timer-controls">
-                <button id="t-start" class="t-ctrl-btn"><i class="fa-solid fa-play"></i></button>
-                <button id="t-pause" class="t-ctrl-btn"><i class="fa-solid fa-pause"></i></button>
-                <button id="t-reset" class="t-ctrl-btn"><i class="fa-solid fa-rotate-right"></i></button>
-            </div>
-            <div class="t-input-container">
-                <input type="number" id="t-input" value="90">
-            </div>
-        </div>
-    </div>
 </body>
 </html>

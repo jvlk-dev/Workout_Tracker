@@ -37,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         $pdo->commit();
-        header("Location: ../index.php?template_id=" . $template_id);
+        header("Location: ../tracker.php?template_id=" . $templateId);
         exit();
 
     } catch (Exception $e) {
