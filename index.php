@@ -57,7 +57,7 @@ if ($userData['weight'] > 0 && $userData['height'] > 0) {
             <div class="nav-title">Web Workout</div>
             <hr class="nav-sep">
             
-            <a href="index.php" class="side-nav-button overview-btn active">
+            <a href="index.php" class="side-nav-button <?php echo (basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-chart-line"></i> Overview
             </a>
             
@@ -71,14 +71,16 @@ if ($userData['weight'] > 0 && $userData['height'] > 0) {
             
             <div style="flex:1; overflow-y: auto;">
                 <?php foreach ($templates as $template): ?>
-                    <a href="tracker.php?template_id=<?php echo $template['id']; ?>" class="side-nav-button">
+                    <!-- Dynamic Active Check for Templates (remains based on ID) -->
+                    <a href="tracker.php?template_id=<?php echo $template['id']; ?>" 
+                    class="side-nav-button <?php echo ($template['id'] == $current_template_id && basename($_SERVER['PHP_SELF']) == 'tracker.php') ? 'active' : ''; ?>">
                         <i class="fa-solid fa-dumbbell"></i> <?php echo htmlspecialchars($template['name']); ?>
                     </a>
                 <?php endforeach; ?>
             </div>
 
             <hr class="nav-sep">
-            <a href="profile.php" class="side-nav-button">
+            <a href="profile.php" class="side-nav-button <?php echo (basename($_SERVER['PHP_SELF']) == 'profile.php') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-user"></i> Profile
             </a>
             <hr class="nav-sep">
