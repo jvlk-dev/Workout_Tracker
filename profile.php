@@ -33,8 +33,8 @@ $templates = $stmtT->fetchAll();
             
             <hr class="nav-sep">
             
-            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
-                <i class="fa-solid fa-plus-circle"></i> New Template
+            <a href="manage_templates.php" class="side-nav-button <?php echo (basename($_SERVER['PHP_SELF']) == 'manage_templates.php' || basename($_SERVER['PHP_SELF']) == 'edit_template.php' || basename($_SERVER['PHP_SELF']) == 'create_template.php') ? 'active' : ''; ?>" style="color:var(--accent);">
+                <i class="fa-solid fa-gear"></i> Manage Templates
             </a>
 
             <hr class="nav-sep-blank">
