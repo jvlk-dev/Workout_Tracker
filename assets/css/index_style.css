@@ -304,3 +304,8 @@ body {
     padding: 2px 5px;
 }
 .t-adjust-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.history-card a:hover {
+    filter: brightness(1.4);
+    transform: scale(1.1);
+}

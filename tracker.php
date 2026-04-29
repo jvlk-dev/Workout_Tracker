@@ -189,13 +189,25 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
             ?>
                 <div class="workout-card history-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; border-bottom: 1px solid #222; padding-bottom: 1rem;">
-                        <span class="history-date" style="margin:0;">
-                            <i class="fa-regular fa-calendar-check" style="margin-right:10px; color: var(--accent);"></i>
-                            <?php echo date("F j, Y — H:i", strtotime($sess['workout_date'])); ?>
-                        </span>
-                        <span class="history-duration">
-                            <i class="fa-solid fa-stopwatch" style="margin-right:5px;"></i> <?php echo $time_formatted; ?>
-                        </span>
+                        <div>
+                            <span class="history-date" style="margin:0;">
+                                <i class="fa-regular fa-calendar-check" style="margin-right:10px; color: var(--accent);"></i>
+                                <?php echo date("F j, Y — H:i", strtotime($sess['workout_date'])); ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <span class="history-duration">
+                                <i class="fa-solid fa-stopwatch" style="margin-right:5px;"></i> <?php echo $time_formatted; ?>
+                            </span>
+                            <!-- NEW ACTION BUTTONS -->
+                            <a href="edit_session.php?id=<?php echo $sess['id']; ?>" style="color: var(--text-dim); transition: 0.2s;" title="Edit Workout"><i class="fa-solid fa-pen-to-square"></i></a>
+                            <a href="actions/delete_session.php?id=<?php echo $sess['id']; ?>&template_id=<?php echo $current_template_id; ?>" 
+                            style="color: var(--hard); transition: 0.2s;" 
+                            title="Delete Workout"
+                            onclick="return confirm('Are you sure you want to delete this workout forever?');">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </div>
                     </div>
                     
                     <?php foreach ($grouped as $name => $sets): ?>
