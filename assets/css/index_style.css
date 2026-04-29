@@ -40,6 +40,7 @@ body {
 }
 .nav-title { font-weight: 800; font-size: 1.3rem; color: var(--accent); margin-bottom: 5px; text-align: center;}
 .nav-sep { border: 0; border-top: 1px solid var(--border); margin: 15px 0; width: 100%; }
+.nav-sep-blank { border: 0; margin: 7px 0; width: 100%; }
 
 .side-nav-button {
     display: flex;

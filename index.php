@@ -20,6 +20,25 @@ $totalVolume = $pdo->prepare("SELECT SUM(weight_val * reps_val) FROM session_set
                               WHERE sessions.user_id = ?");
 $totalVolume->execute([$u_id]);
 $totalVolume = $totalVolume->fetchColumn() ?? 0;
+
+// Fetch User Biometrics
+$stmtU = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmtU->execute([$u_id]);
+$userData = $stmtU->fetch();
+
+// BMI Calculation logic
+$bmi = 0;
+$bmi_text = "N/A";
+if ($userData['weight'] > 0 && $userData['height'] > 0) {
+    $heightInMeters = $userData['height'] / 100;
+    $bmi = $userData['weight'] / ($heightInMeters * $heightInMeters);
+    $bmi = round($bmi, 1);
+    
+    if ($bmi < 18.5) $bmi_text = "Underweight";
+    elseif ($bmi < 25) $bmi_text = "Healthy";
+    elseif ($bmi < 30) $bmi_text = "Overweight";
+    else $bmi_text = "Obese";
+}
 ?>
 
 <!DOCTYPE html>
@@ -44,6 +63,12 @@ $totalVolume = $totalVolume->fetchColumn() ?? 0;
             
             <hr class="nav-sep">
             
+            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
+                <i class="fa-solid fa-plus-circle"></i> New Template
+            </a>
+
+            <hr class="nav-sep-blank">
+            
             <div style="flex:1; overflow-y: auto;">
                 <?php foreach ($templates as $template): ?>
                     <a href="tracker.php?template_id=<?php echo $template['id']; ?>" class="side-nav-button">
@@ -53,8 +78,8 @@ $totalVolume = $totalVolume->fetchColumn() ?? 0;
             </div>
 
             <hr class="nav-sep">
-            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
-                <i class="fa-solid fa-plus-circle"></i> New Template
+            <a href="profile.php" class="side-nav-button">
+                <i class="fa-solid fa-user"></i> Profile
             </a>
             <hr class="nav-sep">
             <a href="logout.php" class="side-nav-button" style="color:#ff7b72;">
@@ -75,23 +100,14 @@ $totalVolume = $totalVolume->fetchColumn() ?? 0;
                     <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Volume</p>
                     <h2 style="font-size: 3rem; margin: 10px 0; color: #2ea043;"><?php echo number_format($totalVolume); ?> <span style="font-size: 1rem;">kg</span></h2>
                 </div>
-            </div>
 
-            <!-- RECENT ACTIVITY -->
-            <h2 style="color: var(--text-dim); margin-bottom: 1.5rem;">Recent Activity</h2>
-            <?php if(empty($recentSessions)): ?>
-                <div class="workout-card history-card">No workouts recorded yet. Pick a template to start!</div>
-            <?php else: ?>
-                <?php foreach($recentSessions as $sess): ?>
-                    <div class="workout-card history-card" style="padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="color: var(--accent);"><?php echo htmlspecialchars($sess['template_name']); ?></strong>
-                            <div style="font-size: 0.85rem; color: var(--text-dim);"><?php echo date("F j, Y", strtotime($sess['workout_date'])); ?></div>
-                        </div>
-                        <a href="tracker.php?template_id=<?php echo $sess['template_id']; ?>" class="diff-btn" style="text-decoration: none;">View Template</a>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                <!-- NEW BIOMETRICS CARD -->
+                <div class="workout-card" style="margin-bottom: 0; text-align: center; border-color: var(--accent);">
+                    <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Body Mass Index (BMI)</p>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: var(--accent);"><?php echo $bmi ?: '--'; ?></h2>
+                    <p style="font-size: 0.9rem; color: var(--text-dim);"><?php echo $bmi_text; ?></p>
+                </div>
+            </div>
         </div>
     </div>
 

@@ -35,19 +35,26 @@ if ($valid_template) {
 }
 
 // 3. Updated function to ensure we only get the user's personal history
-function getLastSessionSets($pdo, $exercise_name, $u_id) {
+function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
+    // We join the sessions table to sort by the actual workout_date
     $sql = "SELECT ss.weight_val, ss.reps_val, ss.difficulty FROM session_sets ss
             JOIN sessions s ON ss.session_id = s.id
-            WHERE ss.exercise_name = ? AND s.user_id = ?
+            WHERE ss.exercise_name = ? 
+            AND s.user_id = ? 
+            AND s.template_id = ?
             AND ss.session_id = (
-                SELECT session_id FROM session_sets inner_ss
-                JOIN sessions inner_s ON inner_ss.session_id = inner_s.id
-                WHERE inner_ss.exercise_name = ? AND inner_s.user_id = ?
-                ORDER BY inner_ss.id DESC LIMIT 1
+                SELECT inner_s.id FROM sessions inner_s
+                JOIN session_sets inner_ss ON inner_s.id = inner_ss.session_id
+                WHERE inner_ss.exercise_name = ? 
+                AND inner_s.user_id = ? 
+                AND inner_s.template_id = ?
+                ORDER BY inner_s.workout_date DESC, inner_s.id DESC 
+                LIMIT 1
             )
             ORDER BY ss.id ASC";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$exercise_name, $u_id, $exercise_name, $u_id]);
+    // We pass the template_id twice (once for main query, once for subquery)
+    $stmt->execute([$exercise_name, $u_id, $template_id, $exercise_name, $u_id, $template_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
@@ -68,24 +75,29 @@ function getLastSessionSets($pdo, $exercise_name, $u_id) {
             <div class="nav-title">Web Workout</div>
             <hr class="nav-sep">
             
-            <a href="index.php" class="side-nav-button overview-btn">
+            <a href="index.php" class="side-nav-button overview-btn active">
                 <i class="fa-solid fa-chart-line"></i> Overview
             </a>
             
             <hr class="nav-sep">
             
+            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
+                <i class="fa-solid fa-plus-circle"></i> New Template
+            </a>
+
+            <hr class="nav-sep-blank">
+            
             <div style="flex:1; overflow-y: auto;">
                 <?php foreach ($templates as $template): ?>
-                    <a href="tracker.php?template_id=<?php echo $template['id']; ?>" 
-                       class="side-nav-button <?php echo ($template['id'] == $current_template_id) ? 'active' : ''; ?>">
+                    <a href="tracker.php?template_id=<?php echo $template['id']; ?>" class="side-nav-button">
                         <i class="fa-solid fa-dumbbell"></i> <?php echo htmlspecialchars($template['name']); ?>
                     </a>
                 <?php endforeach; ?>
             </div>
 
             <hr class="nav-sep">
-            <a href="create_template.php" class="side-nav-button" style="color:var(--accent);">
-                <i class="fa-solid fa-plus-circle"></i> New Template
+            <a href="profile.php" class="side-nav-button">
+                <i class="fa-solid fa-user"></i> Profile
             </a>
             <hr class="nav-sep">
             <a href="logout.php" class="side-nav-button" style="color:#ff7b72;">
@@ -120,7 +132,7 @@ function getLastSessionSets($pdo, $exercise_name, $u_id) {
                         <input type="datetime-local" name="workout_date" id="workout_datetime" class="input-field" value="<?php echo date('Y-m-d\TH:i'); ?>" style="width:220px;">
                     </div>
 
-                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name'], $u_id); ?>
+                    <?php $global_idx = 0; foreach ($exercises as $ex): $last = getLastSessionSets($pdo, $ex['exercise_name'], $u_id, $current_template_id); ?>
                         <div class="exercise-block">
                             <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
                             <?php 
