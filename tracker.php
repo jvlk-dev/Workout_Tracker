@@ -148,7 +148,7 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
                                     <div class="set-label">Set <?php echo $i; ?></div>
                                     <div class="input-group">
                                         <span class="input-label">Weight</span>
-                                        <input type="number" name="weight[]" step="any" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['weight_val'].'kg' : '--'; ?>">
+                                        <input type="number" name="weight[]" step="any" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? floatval($sData['weight_val']).'kg' : '--'; ?>">
                                     </div>
                                     <div class="input-group">
                                         <span class="input-label">Reps</span>
@@ -204,7 +204,7 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
                             <?php foreach ($sets as $idx => $s): ?>
                                 <div class="set-row">
                                     <div class="set-label">Set <?php echo $idx+1; ?></div>
-                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['weight_val']; ?>kg" readonly></div>
+                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo floatval($s['weight_val']); ?>kg" readonly></div>
                                     <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['reps_val']; ?>x" readonly></div>
                                 </div>
                             <?php endforeach; ?>

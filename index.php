@@ -100,7 +100,7 @@ if ($userData['weight'] > 0 && $userData['height'] > 0) {
                 </div>
                 <div class="workout-card" style="margin-bottom: 0; text-align: center;">
                     <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Volume</p>
-                    <h2 style="font-size: 3rem; margin: 10px 0; color: #2ea043;"><?php echo number_format($totalVolume); ?> <span style="font-size: 1rem;">kg</span></h2>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: #2ea043;"><?php echo number_format(floatval($totalVolume)); ?> <span style="font-size: 1rem;">kg</span></h2>
                 </div>
 
                 <!-- NEW BIOMETRICS CARD -->
