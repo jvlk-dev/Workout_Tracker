@@ -179,8 +179,8 @@ body {
 .save-button {
     width: 100%;
     padding: 1.2rem;
-    background: #238636;
-    color: white;
+    background: var(--accent);
+    color: var(--bg-body);
     border: none;
     border-radius: 8px;
     font-weight: 800;
@@ -189,7 +189,10 @@ body {
     transition: 0.2s;
     display: block;
 }
-.save-button:hover { background: #2ea043; }
+.save-button:hover { 
+    filter: brightness(1.1);
+    transform: translateY(-2px); 
+}
 .save-button:active { transform: scale(0.98); }
 
 /* --- HISTORY --- */
