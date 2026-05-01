@@ -37,7 +37,11 @@ $exercises = $exStmt->fetchAll();
                     <?php foreach ($exercises as $ex): ?>
                         <div class="exercise-input-row" style="display:flex; gap:10px; margin-bottom:10px;">
                             <input type="text" name="ex_name[]" class="input-field" style="flex:2;" value="<?php echo htmlspecialchars($ex['exercise_name']); ?>" required>
-                            <input type="number" name="ex_sets[]" class="input-field" style="flex:0.5;" value="<?php echo $ex['default_sets']; ?>" placeholder="Sets">
+                            <select name="ex_type[]" class="input-field" style="flex:1; background: var(--bg-input);">
+                                <option value="reps" <?php echo ($ex['tracking_type'] == 'reps') ? 'selected' : ''; ?>>Reps</option>
+                                <option value="time" <?php echo ($ex['tracking_type'] == 'time') ? 'selected' : ''; ?>>Time</option>
+                            </select>
+                            <input type="number" name="ex_sets[]" class="input-field" style="flex:0.5;" value="<?php echo $ex['default_sets']; ?>">
                             <button type="button" class="diff-btn hard" onclick="this.parentElement.remove()">X</button>
                         </div>
                     <?php endforeach; ?>
@@ -58,6 +62,10 @@ $exercises = $exStmt->fetchAll();
         div.style = "display:flex; gap:10px; margin-bottom:10px;";
         div.innerHTML = `
             <input type="text" name="ex_name[]" class="input-field" style="flex:2;" placeholder="Exercise Name" required>
+            <select name="ex_type[]" class="input-field" style="flex:1; background: var(--bg-input);">
+                <option value="reps">Reps</option>
+                <option value="time">Time</option>
+            </select>
             <input type="number" name="ex_sets[]" class="input-field" style="flex:0.5;" value="3">
             <button type="button" class="diff-btn hard" onclick="this.parentElement.remove()">X</button>
         `;

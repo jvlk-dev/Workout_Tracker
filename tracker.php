@@ -138,7 +138,6 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
                         <div class="exercise-block">
                             <div class="exercise-title"><?php echo htmlspecialchars($ex['exercise_name']); ?></div>
                             <?php 
-                            // CHANGE: Using dynamic set count from database instead of hardcoded 3
                             $setCount = $ex['default_sets'] ?? 3; 
                             for ($i = 1; $i <= $setCount; $i++): 
                                 $sData = $last[$i-1] ?? null;
@@ -151,8 +150,15 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
                                         <input type="number" name="weight[]" step="any" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? floatval($sData['weight_val']).'kg' : '--'; ?>">
                                     </div>
                                     <div class="input-group">
-                                        <span class="input-label">Reps</span>
-                                        <input type="number" name="reps[]" class="input-field <?php echo $lastDiff; ?>" placeholder="<?php echo $sData ? $sData['reps_val'] : '--'; ?>">
+                                        <span class="input-label"><?php echo ($ex['tracking_type'] == 'time') ? 'Time (s)' : 'Reps'; ?></span>
+                                        <input type="number" name="reps[]" class="input-field <?php echo $lastDiff; ?>" 
+                                            placeholder="<?php 
+                                                    if ($sData) {
+                                                        echo ($ex['tracking_type'] == 'time') ? $sData['reps_val'].'s' : $sData['reps_val'].'x';
+                                                    } else {
+                                                        echo '--';
+                                                    }
+                                            ?>">
                                     </div>
                                     <div class="difficulty-picker">
                                         <?php foreach(['Easy', 'Moderate', 'Hard'] as $lvl): ?>
@@ -217,7 +223,17 @@ function getLastSessionSets($pdo, $exercise_name, $u_id, $template_id) {
                                 <div class="set-row">
                                     <div class="set-label">Set <?php echo $idx+1; ?></div>
                                     <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo floatval($s['weight_val']); ?>kg" readonly></div>
-                                    <div class="input-group"><input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" value="<?php echo $s['reps_val']; ?>x" readonly></div>
+                                    <div class="input-group">
+                                        <?php 
+                                            // Quick check for type based on current exercise name in this template
+                                            $typeStmt = $pdo->prepare("SELECT tracking_type FROM template_exercises WHERE template_id = ? AND exercise_name = ? LIMIT 1");
+                                            $typeStmt->execute([$current_template_id, $name]);
+                                            $tInfo = $typeStmt->fetch();
+                                            $unit = ($tInfo && $tInfo['tracking_type'] == 'time') ? 's' : 'x';
+                                        ?>
+                                        <input type="text" class="input-field bg-<?php echo strtolower($s['difficulty']); ?>" 
+                                            value="<?php echo $s['reps_val'] . $unit; ?>" readonly>
+                                    </div>
                                 </div>
                             <?php endforeach; ?>
                         </div>

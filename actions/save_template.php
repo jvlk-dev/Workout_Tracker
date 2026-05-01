@@ -15,14 +15,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_SESSION['user_id'])) {
         $stmt->execute([$name, $u_id]);
         $templateId = $pdo->lastInsertId();
 
-        // Updated query to include default_sets
-        $stmtEx = $pdo->prepare("INSERT INTO template_exercises (template_id, exercise_name, default_sets) VALUES (?, ?, ?)");
-        
+        // Update the PREPARE line:
+        $stmtEx = $pdo->prepare("INSERT INTO template_exercises (template_id, exercise_name, default_sets, tracking_type) VALUES (?, ?, ?, ?)");
+
+        // Update the LOOP:
         for ($i = 0; $i < count($ex_names); $i++) {
             if (!empty($ex_names[$i])) {
-                // Ensure sets is at least 1
                 $setCount = (int)$ex_sets[$i] > 0 ? (int)$ex_sets[$i] : 3;
-                $stmtEx->execute([$templateId, $ex_names[$i], $setCount]);
+                $type = $_POST['ex_type'][$i] ?? 'reps'; // Get the type from POST
+                $stmtEx->execute([$templateId, $ex_names[$i], $setCount, $type]);
             }
         }
 

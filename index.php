@@ -21,6 +21,30 @@ $totalVolume = $pdo->prepare("SELECT SUM(weight_val * reps_val) FROM session_set
 $totalVolume->execute([$u_id]);
 $totalVolume = $totalVolume->fetchColumn() ?? 0;
 
+// 1. Calculate Total Gym Time (Sum of all workout session durations)
+$stmtGym = $pdo->prepare("SELECT SUM(duration) FROM sessions WHERE user_id = ?");
+$stmtGym->execute([$u_id]);
+$gymSeconds = $stmtGym->fetchColumn() ?? 0;
+
+$gymHours = floor($gymSeconds / 3600);
+$gymMins = floor(($gymSeconds % 3600) / 60);
+$totalGymDisplay = ($gymHours > 0) ? "{$gymHours}h {$gymMins}m" : "{$gymMins}m";
+
+// 2. Calculate Active Hold Time (Sum of seconds from "Time-based" exercises only)
+$stmtHold = $pdo->prepare("
+    SELECT SUM(ss.reps_val) 
+    FROM session_sets ss
+    JOIN sessions s ON ss.session_id = s.id
+    JOIN template_exercises te ON s.template_id = te.template_id AND ss.exercise_name = te.exercise_name
+    WHERE s.user_id = ? AND te.tracking_type = 'time'
+");
+$stmtHold->execute([$u_id]);
+$holdSeconds = $stmtHold->fetchColumn() ?? 0;
+
+$holdMins = floor($holdSeconds / 60);
+$holdSecs = $holdSeconds % 60;
+$activeHoldDisplay = ($holdMins > 0) ? "{$holdMins}m {$holdSecs}s" : "{$holdSecs}s";
+
 // Fetch User Biometrics
 $stmtU = $pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmtU->execute([$u_id]);
@@ -94,16 +118,29 @@ if ($userData['weight'] > 0 && $userData['height'] > 0) {
 
             <!-- STATS GRID -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+                <!-- SESSION COUNT CARD -->
                 <div class="workout-card" style="margin-bottom: 0; text-align: center;">
                     <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Sessions</p>
                     <h2 style="font-size: 3rem; margin: 10px 0; color: var(--accent);"><?php echo $totalWorkouts; ?></h2>
                 </div>
+                <!-- TOTAL VOLUME CARD -->
                 <div class="workout-card" style="margin-bottom: 0; text-align: center;">
                     <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Volume</p>
                     <h2 style="font-size: 3rem; margin: 10px 0; color: #2ea043;"><?php echo number_format(floatval($totalVolume)); ?> <span style="font-size: 1rem;">kg</span></h2>
                 </div>
-
-                <!-- NEW BIOMETRICS CARD -->
+                <!-- Total Gym Time (Session Timer) -->
+                <div class="workout-card" style="margin-bottom: 0; text-align: center; border-color: var(--accent);">
+                    <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Total Gym Time</p>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: #f2c94c;"><?php echo $totalGymDisplay; ?></h2>
+                    <p style="font-size: 0.9rem; color: var(--text-dim);">Clocked session time</p>
+                </div>
+                <!-- Active Hold Time (Static Exercises) -->
+                <div class="workout-card" style="margin-bottom: 0; text-align: center; border-color: var(--accent);">
+                    <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Active Hold Time</p>
+                    <h2 style="font-size: 3rem; margin: 10px 0; color: #fb8c00;"><?php echo $activeHoldDisplay; ?></h2>
+                    <p style="font-size: 0.9rem; color: var(--text-dim);">Planks & static holds</p>
+                </div>
+                <!-- BIOMETRICS CARD -->
                 <div class="workout-card" style="margin-bottom: 0; text-align: center; border-color: var(--accent);">
                     <p style="color: var(--text-dim); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Body Mass Index (BMI)</p>
                     <h2 style="font-size: 3rem; margin: 10px 0; color: var(--accent);"><?php echo $bmi ?: '--'; ?></h2>

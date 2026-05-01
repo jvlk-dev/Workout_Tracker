@@ -71,10 +71,14 @@ $templates = $stmt->fetchAll();
                         </div>
                         
                         <!-- Initial Exercise Row -->
-                        <div class="exercise-input-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
-                            <input type="text" name="ex_name[]" class="input-field" placeholder="Exercise Name" required style="flex: 3; text-align: left;">
-                            <input type="number" name="ex_sets[]" class="input-field" placeholder="Sets" value="3" style="flex: 1;">
-                            <div style="width: 40px;"></div> <!-- Spacer for delete button alignment -->
+                        <div class="exercise-input-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" name="ex_name[]" class="input-field" placeholder="Exercise Name" required style="flex: 2; text-align: left;">
+                            <select name="ex_type[]" class="input-field" style="flex: 1; background: var(--bg-input);">
+                                <option value="reps">Reps</option>
+                                <option value="time">Time</option>
+                            </select>
+                            <input type="number" name="ex_sets[]" class="input-field" placeholder="Sets" value="3" style="flex: 0.5;">
+                            <div style="width: 40px;"></div>
                         </div>
                     </div>
 
@@ -99,16 +103,15 @@ $templates = $stmt->fetchAll();
             const container = document.getElementById('exercise-list');
             const row = document.createElement('div');
             row.className = 'exercise-input-row';
-            row.style.display = 'flex';
-            row.style.gap = '15px';
-            row.style.marginBottom = '15px';
-            
+            row.style = "display: flex; gap: 10px; margin-bottom: 15px;";
             row.innerHTML = `
-                <input type="text" name="ex_name[]" class="input-field" placeholder="Exercise Name" required style="flex: 3; text-align: left;">
-                <input type="number" name="ex_sets[]" class="input-field" placeholder="Sets" value="3" style="flex: 1;">
-                <button type="button" class="diff-btn hard" onclick="this.parentElement.remove()" style="width: 40px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <input type="text" name="ex_name[]" class="input-field" placeholder="Exercise Name" required style="flex: 2; text-align: left;">
+                <select name="ex_type[]" class="input-field" style="flex: 1; background: var(--bg-input);">
+                    <option value="reps">Reps</option>
+                    <option value="time">Time</option>
+                </select>
+                <input type="number" name="ex_sets[]" class="input-field" placeholder="Sets" value="3" style="flex: 0.5;">
+                <button type="button" class="diff-btn hard" onclick="this.parentElement.remove()" style="width: 40px;"><i class="fa-solid fa-xmark"></i></button>
             `;
             container.appendChild(row);
         }
